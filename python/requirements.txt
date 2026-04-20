@@ -1,0 +1,6 @@
+# Use Python 3.10–3.12 (venv). PaddlePaddle has no PyPI wheels for Python 3.14+ yet.
+# See: https://www.paddlepaddle.org.cn/install/quick
+# Pin paddleocr 3.x (PaddleX pipeline API); adjust if you upgrade intentionally.
+paddleocr==3.4.1
+paddlepaddle>=2.5.0
+pillow>=10.0.0
