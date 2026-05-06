@@ -675,13 +675,16 @@ export class JobStore {
     )
   }
 
-  async patchStudentState(jobId: string, studentStateJson: string | null): Promise<void> {
+  async patchStudentState(jobId: string, studentStateJson: string | null): Promise<boolean> {
+    const row = this.getJobStmt?.get(jobId) as JobRow | undefined
+    if (!row) return false
     const db = this.requireDb()
     db.prepare(`UPDATE jobs SET student_state_json = ?, updated_at = ? WHERE id = ?`).run(
       studentStateJson,
       new Date().toISOString(),
       jobId,
     )
+    return true
   }
 
   async removeJobDir(jobId: string): Promise<void> {
