@@ -131,7 +131,9 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('job:openJobFolder', async (_event, jobId: string) => {
     if (!jobId) return { ok: false as const, message: 'No job id.' }
-    const dir = store.getJobDir(jobId)
+    const job = await store.get(jobId)
+    if (!job) return { ok: false as const, message: 'Job not found.' }
+    const dir = store.getJobDir(job.id)
     const message = await shell.openPath(dir)
     return { ok: message.length === 0, message: message || undefined }
   })
@@ -178,7 +180,8 @@ function registerIpcHandlers(): void {
       } catch {
         return { ok: false, message: 'Invalid JSON.' }
       }
-      await store.patchStudentState(jobId, json)
+      const updated = await store.patchStudentState(jobId, json)
+      if (!updated) return { ok: false, message: 'Job not found.' }
       return { ok: true }
     },
   )
