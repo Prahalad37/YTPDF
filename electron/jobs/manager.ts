@@ -195,7 +195,6 @@ export class PipelineManager {
         })
       }
     }
-    await this.store.cleanupOldArtifacts(20)
   }
 
   async analyzeLocal(request: AnalyzeLocalRequest): Promise<AnalyzeLocalResponse> {
@@ -996,7 +995,6 @@ export class PipelineManager {
       if (clearRunningInFinally) {
         this.running.delete(jobId)
       }
-      await this.store.cleanupOldArtifacts(20)
     }
   }
 
