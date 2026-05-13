@@ -874,7 +874,7 @@ export class PipelineManager {
         ffmpegPath: binaries.ffmpegPath,
         videoPath,
         outDir: rawFramesDir,
-        fpsIntervalSeconds: 1,
+        fpsIntervalSeconds: afterProbe.request.intervalSec,
         stage: 'extracting',
         onLog: async (entry) => {
           await this.updateJob(jobId, (draft) => this.log(draft, entry.level, entry.stage, entry.message))
