@@ -3,6 +3,7 @@ import path from 'node:path'
 import { DatabaseSync, type StatementSync } from 'node:sqlite'
 import type { CaptureMode, ErrorCode, JobLogEntry, JobRecord, JobRequest } from './types.js'
 import { normalizeExtractionPreset, type ExtractionPreset } from './extractionPresets.js'
+import { isTerminalState } from './state.js'
 
 type JobRow = {
   id: string
@@ -72,6 +73,10 @@ function asCaptureMode(value: string | null): CaptureMode | undefined {
   return undefined
 }
 
+function nowIso(): string {
+  return new Date().toISOString()
+}
+
 function requestToRowParts(
   r: JobRequest,
 ): {
@@ -132,6 +137,7 @@ export class JobStore {
   private updateFrameOcrStmt: StatementSync | null = null
   private setFrameIncludeInPdfStmt: StatementSync | null = null
   private patchJobProgressStmt: StatementSync | null = null
+  private touchJobStmt: StatementSync | null = null
 
   constructor(baseDir: string) {
     this.baseDir = baseDir
@@ -373,7 +379,7 @@ export class JobStore {
       WHERE job_id = ?
       ORDER BY id ASC
     `)
-    this.listJobIdsStmt = db.prepare('SELECT id FROM jobs ORDER BY datetime(updated_at) DESC')
+    this.listJobIdsStmt = db.prepare('SELECT id, state FROM jobs ORDER BY datetime(updated_at) DESC')
     this.deleteJobStmt = db.prepare('DELETE FROM jobs WHERE id = ?')
     this.deleteJobFramesStmt = db.prepare('DELETE FROM job_frames WHERE job_id = ?')
     this.deleteJobArtifactsStmt = db.prepare('DELETE FROM job_artifacts WHERE job_id = ?')
@@ -393,6 +399,7 @@ export class JobStore {
     this.patchJobProgressStmt = db.prepare(`
       UPDATE jobs SET progress_message = ?, progress_percent = ?, updated_at = ? WHERE id = ?
     `)
+    this.touchJobStmt = db.prepare('UPDATE jobs SET updated_at = ? WHERE id = ?')
   }
 
   async updateFrameOcr(
@@ -406,6 +413,7 @@ export class JobStore {
 
   async setFrameIncludeInPdf(jobId: string, frameName: string, include: boolean): Promise<void> {
     this.setFrameIncludeInPdfStmt?.run(include ? 1 : 0, jobId, frameName)
+    this.touchJobStmt?.run(nowIso(), jobId)
   }
 
   /** Updates only `jobs` progress columns — avoids rewriting all `job_frames` (used during OCR). */
@@ -706,8 +714,9 @@ export class JobStore {
   }
 
   async cleanupOldArtifacts(maxJobs = 20): Promise<void> {
-    const rows = (this.listJobIdsStmt?.all() as Array<{ id: string }> | undefined) ?? []
-    const prune = rows.slice(maxJobs)
+    const rows =
+      (this.listJobIdsStmt?.all() as Array<{ id: string; state: JobRecord['state'] }> | undefined) ?? []
+    const prune = rows.filter((row) => isTerminalState(row.state)).slice(maxJobs)
     if (prune.length === 0) return
     const db = this.requireDb()
     const ids = prune.map((r) => r.id)
