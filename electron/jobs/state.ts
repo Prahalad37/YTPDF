@@ -3,13 +3,13 @@ import type { JobState } from './types.js'
 const TERMINAL_STATES: ReadonlySet<JobState> = new Set(['done', 'failed', 'fallback_required', 'cancelled'])
 
 const TRANSITIONS: Record<JobState, ReadonlySet<JobState>> = {
-  queued: new Set(['probing', 'paused', 'cancelled']),
+  queued: new Set(['probing', 'paused', 'failed', 'cancelled']),
   probing: new Set(['downloading', 'extracting', 'fallback_required', 'failed', 'paused', 'cancelled']),
   downloading: new Set(['extracting', 'fallback_required', 'failed', 'paused', 'cancelled']),
   extracting: new Set(['filtering', 'fallback_required', 'failed', 'paused', 'cancelled']),
   filtering: new Set(['building_pdf', 'failed', 'paused', 'cancelled']),
   building_pdf: new Set(['done', 'failed', 'paused', 'cancelled']),
-  paused: new Set(['probing', 'downloading', 'extracting', 'filtering', 'building_pdf', 'cancelled']),
+  paused: new Set(['probing', 'downloading', 'extracting', 'filtering', 'building_pdf', 'failed', 'cancelled']),
   done: new Set(),
   failed: new Set(),
   fallback_required: new Set(),
