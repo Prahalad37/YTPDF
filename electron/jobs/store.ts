@@ -706,27 +706,9 @@ export class JobStore {
   }
 
   async cleanupOldArtifacts(maxJobs = 20): Promise<void> {
-    const rows = (this.listJobIdsStmt?.all() as Array<{ id: string }> | undefined) ?? []
-    const prune = rows.slice(maxJobs)
-    if (prune.length === 0) return
-    const db = this.requireDb()
-    const ids = prune.map((r) => r.id)
-    db.exec('BEGIN IMMEDIATE')
-    try {
-      for (const jobId of ids) {
-        this.deleteJobFramesStmt?.run(jobId)
-        this.deleteJobArtifactsStmt?.run(jobId)
-        this.deleteJobLogsStmt?.run(jobId)
-        this.deleteJobStmt?.run(jobId)
-      }
-      db.exec('COMMIT')
-    } catch (e) {
-      db.exec('ROLLBACK')
-      throw e
-    }
-    for (const row of prune) {
-      await this.removeJobDir(row.id)
-    }
+    void maxJobs
+    // Job folders contain user-created PDFs and study progress. Background cleanup
+    // must never delete persisted jobs; explicit user deletion goes through deleteJobCascade.
   }
 }
 
