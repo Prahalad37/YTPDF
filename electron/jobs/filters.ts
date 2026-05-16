@@ -15,6 +15,7 @@ const DEFAULT_COOLDOWN_SECONDS = 2
 export type SmartFilterConfig = {
   changeThreshold?: number
   cooldownSeconds?: number
+  frameIntervalSeconds?: number
 }
 
 type ImageLike = { width: number; height: number; data: Buffer }
@@ -145,13 +146,14 @@ function changeRatio(curr: number[], prev: number[]): number {
   return changed / n
 }
 
-function parseFrameSeconds(filePath: string): number {
+export function parseFrameSeconds(filePath: string, frameIntervalSeconds = 1): number {
   const base = path.basename(filePath)
   const m = base.match(/(\d+)\.png$/)
   if (!m?.[1]) return 0
   const idx = Number(m[1])
   if (!Number.isFinite(idx) || idx < 1) return 0
-  return idx - 1
+  const interval = Number.isFinite(frameIntervalSeconds) && frameIntervalSeconds > 0 ? frameIntervalSeconds : 1
+  return (idx - 1) * interval
 }
 
 export async function filterFrameFiles(frameFiles: string[]): Promise<FilterResult> {
@@ -197,6 +199,7 @@ export async function filterFramesSmart(
 ): Promise<SmartFilterResult> {
   const threshold = config.changeThreshold ?? DEFAULT_CHANGE_THRESHOLD
   const cooldownSeconds = config.cooldownSeconds ?? DEFAULT_COOLDOWN_SECONDS
+  const frameIntervalSeconds = config.frameIntervalSeconds ?? 1
 
   const kept: SmartFrameDecision[] = []
   let skippedBlank = 0
@@ -207,7 +210,7 @@ export async function filterFramesSmart(
   let lastAcceptedSec = -Infinity
 
   for (const file of frameFiles) {
-    const sec = parseFrameSeconds(file)
+    const sec = parseFrameSeconds(file, frameIntervalSeconds)
     try {
       const img = await decodePng(file)
       if (isBlankImage(img)) {

@@ -95,10 +95,14 @@ async function isExecutable(cmd: string): Promise<boolean> {
   return true
 }
 
+export function versionArgsForBinary(name: 'yt-dlp' | 'ffmpeg'): string[] {
+  return name === 'yt-dlp' ? ['--version'] : ['-hide_banner', '-version']
+}
+
 /** Prefer execFile over spawn — more reliable for absolute paths to CLI tools on macOS/Linux. */
-async function binaryRunsVersion(cmd: string): Promise<boolean> {
+async function binaryRunsVersion(name: 'yt-dlp' | 'ffmpeg', cmd: string): Promise<boolean> {
   try {
-    await execFile(cmd, ['-hide_banner', '-version'], {
+    await execFile(cmd, versionArgsForBinary(name), {
       env: process.env,
       timeout: 20_000,
       maxBuffer: 2 * 1024 * 1024,
@@ -117,7 +121,7 @@ async function resolveOne(name: 'yt-dlp' | 'ffmpeg'): Promise<BinaryHealth> {
   const candidates = candidatePaths(name)
   for (const c of candidates) {
     if (!(await isExecutable(c))) continue
-    if (await binaryRunsVersion(c)) {
+    if (await binaryRunsVersion(name, c)) {
       return {
         name,
         path: c,

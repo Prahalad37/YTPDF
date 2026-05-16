@@ -671,6 +671,7 @@ export class PipelineManager {
     const filtered = await filterFramesSmart(rawFrames, {
       changeThreshold,
       cooldownSeconds: cooldownSec,
+      frameIntervalSeconds: fpsInterval,
     })
     const accepted = filtered.kept.filter((k) => k.accepted)
     const finalFramesDir = this.store.getFramesDir(jobId)
@@ -874,7 +875,7 @@ export class PipelineManager {
         ffmpegPath: binaries.ffmpegPath,
         videoPath,
         outDir: rawFramesDir,
-        fpsIntervalSeconds: 1,
+        fpsIntervalSeconds: afterProbe.request.intervalSec,
         stage: 'extracting',
         onLog: async (entry) => {
           await this.updateJob(jobId, (draft) => this.log(draft, entry.level, entry.stage, entry.message))
@@ -894,6 +895,7 @@ export class PipelineManager {
       const filtered = await filterFramesSmart(rawFrames, {
         changeThreshold: 0.15,
         cooldownSeconds: 2,
+        frameIntervalSeconds: afterProbe.request.intervalSec,
       })
       const accepted = filtered.kept.filter((k) => k.accepted)
       const finalFramesDir = this.store.getFramesDir(jobId)
