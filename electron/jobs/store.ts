@@ -3,6 +3,7 @@ import path from 'node:path'
 import { DatabaseSync, type StatementSync } from 'node:sqlite'
 import type { CaptureMode, ErrorCode, JobLogEntry, JobRecord, JobRequest } from './types.js'
 import { normalizeExtractionPreset, type ExtractionPreset } from './extractionPresets.js'
+import { isTerminalState } from './state.js'
 
 type JobRow = {
   id: string
@@ -373,7 +374,7 @@ export class JobStore {
       WHERE job_id = ?
       ORDER BY id ASC
     `)
-    this.listJobIdsStmt = db.prepare('SELECT id FROM jobs ORDER BY datetime(updated_at) DESC')
+    this.listJobIdsStmt = db.prepare('SELECT id, state FROM jobs ORDER BY datetime(updated_at) DESC')
     this.deleteJobStmt = db.prepare('DELETE FROM jobs WHERE id = ?')
     this.deleteJobFramesStmt = db.prepare('DELETE FROM job_frames WHERE job_id = ?')
     this.deleteJobArtifactsStmt = db.prepare('DELETE FROM job_artifacts WHERE job_id = ?')
@@ -706,8 +707,10 @@ export class JobStore {
   }
 
   async cleanupOldArtifacts(maxJobs = 20): Promise<void> {
-    const rows = (this.listJobIdsStmt?.all() as Array<{ id: string }> | undefined) ?? []
-    const prune = rows.slice(maxJobs)
+    const rows =
+      (this.listJobIdsStmt?.all() as Array<{ id: string; state: JobRecord['state'] }> | undefined) ??
+      []
+    const prune = rows.slice(maxJobs).filter((row) => isTerminalState(row.state))
     if (prune.length === 0) return
     const db = this.requireDb()
     const ids = prune.map((r) => r.id)
