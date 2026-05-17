@@ -704,6 +704,7 @@ export class JobStore {
   }
 
   async cleanupOldArtifacts(_maxJobs = 20): Promise<void> {
+    void _maxJobs
     // Historical jobs are user-created outputs; only explicit deletion should remove them.
   }
 }
