@@ -123,7 +123,6 @@ export class JobStore {
   private listJobsStmt: StatementSync | null = null
   private listFramesStmt: StatementSync | null = null
   private listLogsStmt: StatementSync | null = null
-  private listJobIdsStmt: StatementSync | null = null
   private deleteJobStmt: StatementSync | null = null
   private deleteJobFramesStmt: StatementSync | null = null
   private deleteJobArtifactsStmt: StatementSync | null = null
@@ -373,7 +372,6 @@ export class JobStore {
       WHERE job_id = ?
       ORDER BY id ASC
     `)
-    this.listJobIdsStmt = db.prepare('SELECT id FROM jobs ORDER BY datetime(updated_at) DESC')
     this.deleteJobStmt = db.prepare('DELETE FROM jobs WHERE id = ?')
     this.deleteJobFramesStmt = db.prepare('DELETE FROM job_frames WHERE job_id = ?')
     this.deleteJobArtifactsStmt = db.prepare('DELETE FROM job_artifacts WHERE job_id = ?')
@@ -705,28 +703,9 @@ export class JobStore {
     await this.removeJobDir(jobId)
   }
 
-  async cleanupOldArtifacts(maxJobs = 20): Promise<void> {
-    const rows = (this.listJobIdsStmt?.all() as Array<{ id: string }> | undefined) ?? []
-    const prune = rows.slice(maxJobs)
-    if (prune.length === 0) return
-    const db = this.requireDb()
-    const ids = prune.map((r) => r.id)
-    db.exec('BEGIN IMMEDIATE')
-    try {
-      for (const jobId of ids) {
-        this.deleteJobFramesStmt?.run(jobId)
-        this.deleteJobArtifactsStmt?.run(jobId)
-        this.deleteJobLogsStmt?.run(jobId)
-        this.deleteJobStmt?.run(jobId)
-      }
-      db.exec('COMMIT')
-    } catch (e) {
-      db.exec('ROLLBACK')
-      throw e
-    }
-    for (const row of prune) {
-      await this.removeJobDir(row.id)
-    }
+  async cleanupOldArtifacts(_maxJobs = 20): Promise<void> {
+    void _maxJobs
+    // Historical jobs are user-created outputs; only explicit deletion should remove them.
   }
 }
 
